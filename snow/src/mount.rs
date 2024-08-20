@@ -98,6 +98,7 @@ pub fn non_essential_system_filesystems(target: PathBuf) -> Result<()> {
         ("hugetlbfs", target.join("dev/hugepages")),
         ("binfmt_misc", target.join("proc/sys/fs/binfmt_misc")),
         ("fusectl", target.join("sys/fs/fuse/connections")),
+        ("debugfs", target.join("sys/kernel/debug")),
     ];
 
     for (fstype, mountpoint) in fstypes_and_mountpoints.iter() {
