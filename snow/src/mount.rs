@@ -71,6 +71,8 @@ pub fn essential_system_filesystems(target: PathBuf) -> Result<()> {
         Some("/dev"),
         &target.join("dev"),
         None,
+        // We bind mount but not recursively so things like devpts won't be
+        // shared with the original mount namespace.
         MsFlags::MS_BIND,
         None,
     )?;
