@@ -12,7 +12,9 @@ use nix::sys::stat;
 use nix::unistd;
 use nix::unistd::execve;
 use nix::unistd::pivot_root;
+use rand::Rng;
 use std::ffi::{CStr, CString};
+use std::hint::black_box;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -83,7 +85,7 @@ fn create_overlayfs_directories(target: PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn change_root_filesystem(new_root: PathBuf) -> Result<()> {
+fn pivot_rootfs_place_old_at_mnt_root(new_root: PathBuf) -> Result<()> {
     let put_old = new_root.join("mnt/root");
     unistd::mkdir(&put_old, stat::Mode::S_IRWXU)?;
 
@@ -116,12 +118,10 @@ fn exec_zsh() -> Result<()> {
 fn main() -> Result<()> {
     env_logger::init();
 
-    info!(
-        "squashfs taste: {}, pid: {}",
-        // hex::encode(Sha256::digest(SQUASHFS_SECTION)),
-        SQUASHFS_SECTION[std::process::id() as usize],
-        std::process::id()
-    );
+    // prevents the squashfs section from being optimized out.
+    black_box(SQUASHFS_SECTION[rand::thread_rng().gen_range(0..SQUASHFS_SECTION.len())]);
+
+    info!("pid: {}", std::process::id());
 
     // This directory will not be available for us anymore :(
     // but its pretty much useless for our process.
@@ -153,34 +153,42 @@ fn main() -> Result<()> {
     create_overlayfs_directories(useless_dir.clone())?;
 
     info!(
-        "mounting squashfs ro on {}",
+        "mounting squashfs on {}",
         useless_dir.join("lower").display()
     );
-    mount::squashfs_ro(loop_device_path, useless_dir.join("lower"))?;
+    mount::squashfs(loop_device_path, useless_dir.join("lower"))?;
 
     info!("mounting overlayfs using {}", useless_dir.display());
     mount::overlayfs(useless_dir.clone())?;
 
+    let rootfs_dir = useless_dir.join("merged");
+
     info!(
         "mounting /proc /sys /dev /dev/pts on {}",
-        useless_dir.join("merged").display()
+        rootfs_dir.display()
     );
-    mount::essential_system_filesystems(useless_dir.join("merged"))?;
+    mount::essential_system_filesystems(rootfs_dir.clone())?;
 
     info!(
         "mounting non essential system filesystems on {}",
-        useless_dir.join("merged").display()
+        rootfs_dir.display()
     );
-    mount::non_essential_system_filesystems(useless_dir.join("merged"))?;
+    mount::non_essential_system_filesystems(rootfs_dir.clone())?;
 
     info!(
-        "changing root filesystem to {}",
-        useless_dir.join("merged").display()
+        "mounting network config files /etc/resolv.conf /etc/hostname /etc/hosts on {}",
+        rootfs_dir.display()
     );
-    change_root_filesystem(useless_dir.join("merged"))?;
+    mount::network_configuration(rootfs_dir.clone())?;
+
+    info!(
+        "pivoting rootfs to {}, placing old at /mnt/root",
+        rootfs_dir.display()
+    );
+    pivot_rootfs_place_old_at_mnt_root(rootfs_dir.clone())?;
 
     info!("exec-ing zsh bye!");
-    let _ = exec_zsh()?;
+    exec_zsh()?;
 
     Ok(())
 }

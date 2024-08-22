@@ -16,7 +16,7 @@ pub fn tmpfs(target: PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn squashfs_ro(loop_device_path: PathBuf, target: PathBuf) -> Result<()> {
+pub fn squashfs(loop_device_path: PathBuf, target: PathBuf) -> Result<()> {
     mount::<PathBuf, PathBuf, str, str>(
         Some(&loop_device_path),
         &target,
@@ -121,6 +121,30 @@ pub fn non_essential_system_filesystems(target: PathBuf) -> Result<()> {
                 );
             }
         }
+    }
+
+    Ok(())
+}
+
+pub fn network_configuration(target: PathBuf) -> Result<()> {
+    let network_configuration_files: [&str; 3] = ["etc/resolv.conf", "etc/hostname", "etc/hosts"];
+
+    for file in network_configuration_files {
+        mount::<PathBuf, PathBuf, str, str>(
+            Some(&PathBuf::from("/").join(file)),
+            &target.join(file),
+            None,
+            MsFlags::MS_BIND,
+            None,
+        )?;
+
+        mount::<str, PathBuf, str, str>(
+            None,
+            &target.join(file),
+            None,
+            MsFlags::MS_REMOUNT | MsFlags::MS_BIND | MsFlags::MS_RDONLY,
+            None,
+        )?;
     }
 
     Ok(())
