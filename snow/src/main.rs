@@ -143,12 +143,12 @@ fn main() -> Result<()> {
         .expect("failed to get path of loop device!");
     info!("using loop device {}", loop_device_path.display());
 
-    info!("mounting tmpfs on {:?}", useless_dir.clone());
+    info!("mounting tmpfs on {}", useless_dir.display());
     mount::tmpfs(useless_dir.clone())?;
 
     info!(
-        "creating overlayfs directories on {:?}",
-        useless_dir.clone()
+        "creating overlayfs directories on {}",
+        useless_dir.display()
     );
     create_overlayfs_directories(useless_dir.clone())?;
 

@@ -10,6 +10,9 @@ pub fn tmpfs(target: PathBuf) -> Result<()> {
         &target,
         Some("tmpfs"),
         MsFlags::empty(),
+        // We use the default size which is `physical ram without swap / 2`
+        // TODO: Ideally we would use the `noswap` option if available on the current kernel so performance
+        // will be more predictable and print a warning otherwise.
         Some("mode=1777"),
     )?;
 
@@ -99,6 +102,8 @@ pub fn non_essential_system_filesystems(target: PathBuf) -> Result<()> {
         ("binfmt_misc", target.join("proc/sys/fs/binfmt_misc")),
         ("fusectl", target.join("sys/fs/fuse/connections")),
         ("debugfs", target.join("sys/kernel/debug")),
+        // Apparantly glibc expects /dev/shm to be a tmpfs but we are based on Alpine
+        // so no need for that.
     ];
 
     for (fstype, mountpoint) in fstypes_and_mountpoints.iter() {
