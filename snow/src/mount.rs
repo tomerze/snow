@@ -10,7 +10,7 @@ pub fn tmpfs(target: PathBuf) -> Result<()> {
         &target,
         Some("tmpfs"),
         MsFlags::empty(),
-        Some("size=32m,mode=1777"),
+        Some("mode=1777"),
     )?;
 
     Ok(())

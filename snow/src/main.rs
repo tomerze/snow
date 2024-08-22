@@ -91,7 +91,7 @@ fn pivot_rootfs_place_old_at_mnt_root(new_root: PathBuf) -> Result<()> {
 
     pivot_root(&new_root, &put_old)?;
 
-    unistd::chdir("/")?;
+    unistd::chdir("/root")?;
 
     Ok(())
 }
